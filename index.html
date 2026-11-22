@@ -1,0 +1,415 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PromptPad — rubrica prompt personale</title>
+<style>
+  :root {
+    --bg: #14161c;
+    --panel: #1d2028;
+    --panel2: #232734;
+    --line: #2c3040;
+    --text: #e8eaf0;
+    --muted: #9aa0b0;
+    --accent: #7c9cff;
+    --accent2: #5be3c8;
+    --danger: #ff6b6b;
+  }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; margin: 0; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    display: grid;
+    grid-template-columns: 320px 1fr;
+    height: 100vh;
+  }
+  /* Sidebar */
+  .sidebar {
+    background: var(--panel);
+    border-right: 1px solid var(--line);
+    display: flex; flex-direction: column;
+    min-height: 0;
+  }
+  .brand {
+    padding: 18px 18px 10px;
+    border-bottom: 1px solid var(--line);
+  }
+  .brand h1 { font-size: 1.15rem; margin: 0; letter-spacing: .3px; }
+  .brand p { margin: 4px 0 0; font-size: .78rem; color: var(--muted); }
+  .search-row { padding: 12px 14px; border-bottom: 1px solid var(--line); display: flex; gap: 8px; }
+  .search-row input {
+    flex: 1; background: var(--bg); color: var(--text);
+    border: 1px solid var(--line); border-radius: 8px;
+    padding: 8px 10px; font-size: .9rem; outline: none;
+  }
+  .search-row input:focus { border-color: var(--accent); }
+  .btn-primary, .btn-ghost, .btn-danger {
+    border: 1px solid var(--line); background: var(--panel2); color: var(--text);
+    padding: 8px 12px; border-radius: 8px; cursor: pointer; font-size: .9rem;
+    transition: border-color .15s, background .15s;
+  }
+  .btn-primary { background: var(--accent); border-color: var(--accent); color: #0e1424; font-weight: 600; }
+  .btn-primary:hover { filter: brightness(1.1); }
+  .btn-ghost:hover { border-color: var(--accent); }
+  .btn-danger:hover { border-color: var(--danger); color: var(--danger); }
+  .list {
+    flex: 1; overflow-y: auto; padding: 8px;
+  }
+  .item {
+    padding: 10px 12px; border-radius: 10px; cursor: pointer; margin-bottom: 6px;
+    border: 1px solid transparent;
+    transition: background .12s, border-color .12s;
+  }
+  .item:hover { background: var(--panel2); }
+  .item.active { background: var(--panel2); border-color: var(--accent); }
+  .item .t { font-weight: 600; font-size: .92rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .item .d { font-size: .78rem; color: var(--muted); margin-top: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .item .meta { font-size: .7rem; color: #6d7386; margin-top: 4px; }
+  .cat-filter { padding: 10px 14px; border-bottom: 1px solid var(--line); display: flex; align-items: center; gap: 8px; }
+  .cat-filter label { color: var(--muted); font-size: .72rem; text-transform: uppercase; letter-spacing: .6px; white-space: nowrap; }
+  .cat-filter select { flex: 1; min-width: 0; background: var(--bg); border: 1px solid var(--line); color: var(--text); border-radius: 8px; padding: 7px 9px; font-size: .88rem; outline: none; cursor: pointer; }
+  .cat-filter select:focus { border-color: var(--accent); }
+  .cat-input { background: var(--panel2); border: 1px solid var(--line); border-radius: 10px; color: var(--text); padding: 8px 12px; font-size: .92rem; width: 100%; outline: none; margin-bottom: 14px; }
+  .cat-input:focus { border-color: var(--accent); }
+  .sidebar-footer { padding: 10px 14px; border-top: 1px solid var(--line); display: flex; gap: 8px; flex-wrap: wrap; }
+  .empty { color: var(--muted); font-size: .85rem; text-align: center; padding: 30px 18px; line-height: 1.5; }
+  /* Main */
+  .main { display: flex; flex-direction: column; min-width: 0; min-height: 0; }
+  .actions {
+    display: flex; gap: 8px; padding: 14px 18px; border-bottom: 1px solid var(--line);
+    align-items: center; flex-wrap: wrap;
+  }
+  .actions .spacer { flex: 1; }
+  .count { font-size: .8rem; color: var(--muted); }
+  .editor { flex: 1; overflow-y: auto; padding: 18px; display: flex; flex-direction: column; }
+  .field-label { font-size: .75rem; color: var(--muted); text-transform: uppercase; letter-spacing: .6px; margin: 0 0 6px; }
+  #titleInput {
+    background: transparent; border: none; outline: none; resize: none;
+    color: var(--text); font-size: 1.5rem; font-weight: 700; width: 100%;
+    placeholder: "Titolo del prompt"; margin-bottom: 10px;
+  }
+  #titleInput:focus { border-bottom: 1px solid var(--line); }
+  #contentInput {
+    flex: 1; min-height: 320px; width: 100%; resize: vertical;
+    background: var(--panel); border: 1px solid var(--line); border-radius: 12px;
+    color: var(--text); font-family: 'Cascadia Code', 'Fira Code', Consolas, monospace;
+    font-size: .95rem; line-height: 1.55; padding: 16px; outline: none;
+  }
+  #contentInput:focus { border-color: var(--accent); }
+  .hint { color: var(--muted); font-size: .78rem; margin-top: 10px; }
+  .toast {
+    position: fixed; bottom: 22px; left: 50%; transform: translateX(-50%);
+    background: var(--accent2); color: #0a1512; font-weight: 600;
+    padding: 9px 18px; border-radius: 999px; opacity: 0; pointer-events: none;
+    transition: opacity .2s; font-size: .9rem; z-index: 10;
+  }
+  .toast.show { opacity: 1; }
+  .corner-tag {
+    position: fixed; right: 12px; bottom: 12px; z-index: 20;
+    background: rgba(124, 156, 255, .12); border: 1px solid rgba(124, 156, 255, .35);
+    color: var(--accent); font-size: .68rem; letter-spacing: .5px; 
+    padding: 4px 10px; border-radius: 999px; pointer-events: none;
+    font-weight: 600;
+  }
+  @media (max-width: 760px) {
+    body { grid-template-columns: 1fr; grid-template-rows: auto 1fr; }
+    .sidebar { max-height: 38vh; border-right: none; border-bottom: 1px solid var(--line); }
+    .corner-tag { font-size: .6rem; padding: 3px 8px; }
+  }
+</style>
+</head>
+<body>
+  <aside class="sidebar">
+    <div class="brand">
+      <h1>✒ PromptPad</h1>
+      <p>Diario personale dei prompt</p>
+    </div>
+    <div class="search-row">
+      <input id="search" type="text" placeholder="Cerca prompt…" autocomplete="off">
+      <button class="btn-primary" id="newBtn" title="Nuovo prompt">+ Nuovo</button>
+    </div>
+    <div class="cat-filter">
+      <label for="catFilter">Filtra</label>
+      <select id="catFilter"></select>
+    </div>
+    <div class="list" id="list"></div>
+    <div class="sidebar-footer">
+      <button class="btn-ghost" id="exportBtn" title="Scarica tutti i prompt in JSON">⬇ Esporta</button>
+      <button class="btn-ghost" id="importBtn" title="Importa prompt da JSON">⬆ Importa</button>
+      <input type="file" id="importFile" accept="application/json,.json" hidden>
+    </div>
+  </aside>
+
+  <main class="main">
+    <div class="actions">
+      <span class="count" id="count"></span>
+      <div class="spacer"></div>
+      <button class="btn-ghost" id="copyBtn" title="Copia il testo del prompt">📋 Copia</button>
+      <button class="btn-ghost" id="dupBtn" title="Duplica questo prompt">⧉ Duplica</button>
+      <button class="btn-danger" id="delBtn" title="Elimina questo prompt">🗑 Elimina</button>
+      <button class="btn-primary" id="saveBtn">Salva</button>
+    </div>
+    <div class="editor">
+      <p class="field-label">Titolo</p>
+      <input id="titleInput" type="text" placeholder="Titolo del prompt" autocomplete="off">
+      <p class="field-label">Categoria</p>
+      <input id="categoryInput" list="categorySuggestions" class="cat-input" placeholder="es. ConFiUI, Scrivere, Coding…" autocomplete="off">
+      <datalist id="categorySuggestions"></datalist>
+      <p class="field-label">Contenuto</p>
+      <textarea id="contentInput" placeholder="Scrivi qui il tuo prompt…" spellcheck="false"></textarea>
+      <p class="hint">Controlla che il prompt sia pronto per ConFiUI. <kbd>Ctrl+Invio</kbd> salva, <kbd>Ctrl+Maiusc+C</kbd> copia. I dati restano salvati nel browser (localStorage) — esporta/importa per portabilità.</p>
+    </div>
+  </main>
+
+  <div class="corner-tag">Rino Laquale 2026</div>
+  <div class="toast" id="toast"></div>
+
+<script>
+(function(){
+  const KEY = 'promptpad.prompts.v1';
+  const listEl = document.getElementById('list');
+  const countEl = document.getElementById('count');
+  const searchEl = document.getElementById('search');
+  const catFilterEl = document.getElementById('catFilter');
+  const categoryInput = document.getElementById('categoryInput');
+  const catSuggestEl = document.getElementById('categorySuggestions');
+  const titleEl = document.getElementById('titleInput');
+  const contentEl = document.getElementById('contentInput');
+  const toastEl = document.getElementById('toast');
+  const newBtn = document.getElementById('newBtn');
+  const saveBtn = document.getElementById('saveBtn');
+  const copyBtn = document.getElementById('copyBtn');
+  const dupBtn = document.getElementById('dupBtn');
+  const delBtn = document.getElementById('delBtn');
+  const exportBtn = document.getElementById('exportBtn');
+  const importBtn = document.getElementById('importBtn');
+  const importFile = document.getElementById('importFile');
+
+  let prompts = load();
+  let currentId = null;
+  let currentCategory = 'all';
+
+  function normalizeLoad(items) {
+    return (items || []).map(p => ({
+      ...p,
+      category: p && p.category ? String(p.category) : 'Generali'
+    }));
+  }
+
+  function load() {
+    try { return normalizeLoad(JSON.parse(localStorage.getItem(KEY)) || []); }
+    catch (e) { return []; }
+  }
+  function persist() { localStorage.setItem(KEY, JSON.stringify(prompts)); }
+  function uid() { return (crypto && crypto.randomUUID) ? crypto.randomUUID() : 'p-' + Date.now() + '-' + Math.random().toString(16).slice(2); }
+  function nowIso() { return new Date().toISOString(); }
+
+  function toast(msg) {
+    toastEl.textContent = msg;
+    toastEl.classList.add('show');
+    clearTimeout(toast._t);
+    toast._t = setTimeout(() => toastEl.classList.remove('show'), 1600);
+  }
+
+  function uniqueCategories() {
+    const set = new Set(prompts.map(p => p.category || 'Generali'));
+    return [...set].sort((a, b) => a.localeCompare(b, 'it', { sensitivity: 'base' }));
+  }
+
+  function escapeHtml(text) {
+    return String(text).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  }
+
+  function renderCategoryFilter() {
+    const cats = uniqueCategories();
+    const counts = {};
+    for (const p of prompts) { const c = p.category || 'Generali'; counts[c] = (counts[c] || 0) + 1; }
+    let html = '<option value="all">Tutte (' + prompts.length + ')</option>';
+    for (const c of cats) html += '<option value="' + c.replace(/"/g, '&quot;') + '">' + escapeHtml(c) + ' (' + counts[c] + ')</option>';
+    catFilterEl.innerHTML = html;
+    if (currentCategory !== 'all' && !cats.includes(currentCategory)) currentCategory = 'all';
+    catFilterEl.value = currentCategory;
+    catSuggestEl.innerHTML = cats.map(c => '<option value="' + c.replace(/"/g, '&quot;') + '">').join('');
+  }
+
+  function visible() {
+    const q = searchEl.value.trim().toLowerCase();
+    return prompts
+      .filter(p => currentCategory === 'all' || p.category === currentCategory)
+      .filter(p => !q || (p.title + ' ' + p.content + ' ' + p.category).toLowerCase().includes(q))
+      .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
+  }
+
+  function render() {
+    renderCategoryFilter();
+    const items = visible();
+    countEl.textContent = items.length + ' / ' + prompts.length + ' prompt';
+    listEl.innerHTML = '';
+    if (!items.length) {
+      listEl.innerHTML = '<div class="empty">' + (prompts.length ? 'Nessun prompt trovato.<br>Prova a svuotare la ricerca.' : 'Nessun prompt ancora.<br>Clicca <b>+ Nuovo</b> per iniziare.') + '</div>';
+      return;
+    }
+    for (const p of items) {
+      const el = document.createElement('div');
+      el.className = 'item' + (p.id === currentId ? ' active' : '');
+      el.innerHTML = '<div class="t"></div><div class="d"></div><div class="meta"></div>';
+      el.querySelector('.t').textContent = p.title || '(senza titolo)';
+      el.querySelector('.d').textContent = (p.content || '').split('\n')[0];
+      el.querySelector('.meta').textContent = (p.category || 'Generali') + ' · ' + new Date(p.updatedAt).toLocaleString('it-IT');
+      el.addEventListener('click', () => select(p.id));
+      listEl.appendChild(el);
+    }
+  }
+
+  function select(id) {
+    currentId = id;
+    const p = prompts.find(x => x.id === id);
+    if (p) { titleEl.value = p.title; contentEl.value = p.content; categoryInput.value = p.category || 'Generali'; }
+    render();
+  }
+
+  function blank() {
+    currentId = null;
+    titleEl.value = ''; contentEl.value = '';
+    categoryInput.value = currentCategory === 'all' ? '' : currentCategory;
+    render();
+    titleEl.focus();
+  }
+
+  function save() {
+    const t = titleEl.value.trim();
+    const c = contentEl.value;
+    const cat = categoryInput.value.trim() || 'Generali';
+    if (!t && !c.trim()) { toast('Scrivi qualcosa prima di salvare'); return; }
+    const now = nowIso();
+    if (currentId) {
+      const p = prompts.find(x => x.id === currentId);
+      if (p) { p.title = t || '(senza titolo)'; p.content = c; p.category = cat; p.updatedAt = now; }
+      toast('Prompt aggiornato ✓');
+    } else {
+      const p = { id: uid(), title: t || '(senza titolo)', content: c, category: cat, createdAt: now, updatedAt: now };
+      prompts.push(p);
+      currentId = p.id;
+      toast('Prompt salvato ✓');
+    }
+    persist();
+    render();
+  }
+
+  function remove() {
+    if (!currentId) return;
+    if (!confirm('Eliminare questo prompt? L’operazione non è reversibile.')) return;
+    prompts = prompts.filter(p => p.id !== currentId);
+    currentId = null;
+    persist();
+    blank();
+    toast('Prompt eliminato');
+  }
+
+  function duplicate() {
+    if (!currentId) return;
+    const p = prompts.find(x => x.id === currentId);
+    if (!p) return;
+    const now = nowIso();
+    const copy = { id: uid(), title: (p.title || '(senza titolo)') + ' (copia)', content: p.content, category: p.category || 'Generali', createdAt: now, updatedAt: now };
+    prompts.push(copy);
+    currentId = copy.id;
+    persist();
+    select(copy.id);
+    toast('Duplicato ✓');
+  }
+
+  async function copy() {
+    const text = contentEl.value;
+    if (!text) { toast('Niente da copiare'); return; }
+    try {
+      await navigator.clipboard.writeText(text);
+      toast('Copiato negli appunti ✓');
+    } catch (e) {
+      const ta = document.createElement('textarea');
+      ta.value = text; document.body.appendChild(ta); ta.select();
+      try { document.execCommand('copy'); toast('Copiato negli appunti ✓'); }
+      catch (_) { toast('Copia non riuscita'); }
+      document.body.removeChild(ta);
+    }
+  }
+
+  function exportData() {
+    if (!prompts.length) { toast('Niente da esportare'); return; }
+    const blob = new Blob([JSON.stringify(prompts, null, 2)], { type: 'application/json' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'promptpad-' + new Date().toISOString().slice(0, 10) + '.json';
+    a.click();
+    URL.revokeObjectURL(a.href);
+    toast('Esportato');
+  }
+
+  function importData(json) {
+    if (!Array.isArray(json)) throw new Error('Formato non valido');
+    let added = 0;
+    for (const item of json) {
+      if (!item || typeof item !== 'object') continue;
+      const now = nowIso();
+      prompts.push({
+        id: item.id || uid(),
+        title: String(item.title ?? '(senza titolo)'),
+        content: String(item.content ?? ''),
+        category: item.category ? String(item.category) : 'Generali',
+        createdAt: item.createdAt || now,
+        updatedAt: item.updatedAt || now
+      });
+      added++;
+    }
+    persist();
+    blank();
+    toast('Importati ' + added + ' prompt');
+  }
+
+  catFilterEl.addEventListener('change', () => { currentCategory = catFilterEl.value; render(); });
+  newBtn.addEventListener('click', blank);
+  saveBtn.addEventListener('click', save);
+  searchEl.addEventListener('input', render);
+  contentEl.addEventListener('keydown', e => {
+    if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') { e.preventDefault(); save(); }
+  });
+  titleEl.addEventListener('keydown', e => {
+    if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') { e.preventDefault(); save(); }
+  });
+  copyBtn.addEventListener('click', copy);
+  dupBtn.addEventListener('click', duplicate);
+  delBtn.addEventListener('click', remove);
+  exportBtn.addEventListener('click', exportData);
+  importBtn.addEventListener('click', () => importFile.click());
+  importFile.addEventListener('change', () => {
+    const f = importFile.files && importFile.files[0];
+    if (!f) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      try {
+        importData(JSON.parse(reader.result));
+      } catch (e) {
+        toast('Import non riuscito: file non valido');
+      }
+      importFile.value = '';
+    };
+    reader.readAsText(f);
+  });
+
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Delete' && document.activeElement !== contentEl && document.activeElement !== titleEl && document.activeElement !== searchEl && document.activeElement !== categoryInput && currentId) {
+      remove();
+    }
+    if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key.toLowerCase() === 'c') {
+      e.preventDefault(); copy();
+    }
+  });
+
+  render();
+})();
+</script>
+</body>
+</html>
